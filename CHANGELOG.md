@@ -1,5 +1,11 @@
 # Histórico de versões
 
+## 1.0.1 — 05/10/2026
+- PDF gerado em cerca de metade do tempo (aprox. 3,5 s em vez de 7 s): as consultas rodam no mesmo processo e o gerador
+  não espera mais à toa pelo Edge.
+- O gerador imprime um resumo (linhas, primeira linha, totais, cabeçalho). O Claude confere por ele em vez de abrir o PDF.
+- Fluxo do skill mais rápido: o PDF é gerado direto, sem rodar a consulta antes para testar.
+
 ## Instalador — 05/10/2026 (correção)
 - O instalador agora baixa e instala o plugin na hora, usando o Claude Code que acompanha o aplicativo Claude.
   Antes, só declarar no settings.json não fazia o Claude baixar o plugin.

@@ -54,18 +54,21 @@ A especificação, o layout, os tipos de gráfico e os exemplos estão em `refer
 3. **Verifique se já existe uma procedure** de relatório em `references/procedures.md` (somente as sem "Grava?").
    Use-a com `SELECT * FROM PROCEDURE(param1, param2, ...)`.
 4. **Escreva a consulta seguindo `references/performance.md`.** Isso é obrigatório para bases grandes: filtro por data
-   indexada + filial, sem funções sobre colunas no WHERE, com `FIRST n` em listagens. Rode antes com `-Plan` se a
-   consulta envolver tabelas de movimento.
-5. **Teste a consulta** com `fbquery.ps1` (com `FIRST` pequeno) para conferir colunas e valores.
-6. **Gere SEMPRE o PDF no padrão Mec Gestão** com `scripts/gerar_relatorio.ps1`, seguindo `references/relatorio-pdf.md`:
+   indexada + filial, sem funções sobre colunas no WHERE, com `FIRST n` em listagens. Use `-Plan` só quando houver
+   dúvida se a consulta usa índice numa tabela de movimento grande.
+5. **Gere SEMPRE o PDF no padrão Mec Gestão** com `scripts/gerar_relatorio.ps1`, seguindo `references/relatorio-pdf.md`:
    - cabeçalho com os dados da FILIAL;
    - título = assunto/tabela consultada (PRODUTOS, CLIENTES, VENDAS POR DIA...);
    - linha de filtro com os critérios;
    - tabela com totais;
    - **gráfico sempre que os dados forem analíticos**.
 
-   Abra o PDF para conferir, entregue-o ao usuário e resuma o resultado em poucas linhas, em português, com valores em
-   R$ de 2 casas.
+   **Seja rápido:** coloque o SQL direto no campo `"sql"` da spec e gere o PDF numa única execução, sem testar a
+   consulta antes. Se der erro, o gerador mostra a mensagem: corrija e rode de novo. Para conferir, use o **resumo que o
+   gerador imprime** (linhas, primeira linha, totais, cabeçalho). **Não abra o PDF**, salvo se o resumo indicar problema:
+   0 linhas inesperadas, totais estranhos ou cabeçalho vazio.
+6. **Entregue o PDF** ao usuário: use a ferramenta de envio de arquivo, se houver; senão, informe o caminho. Resuma o
+   resultado em poucas linhas, em português, com valores em R$ de 2 casas.
 7. Se a consulta ficar lenta por falta de índice ou se um relatório depender de uma melhoria no banco, **apenas recomende**
    ao usuário que acione o suporte/DBA.
 

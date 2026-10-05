@@ -78,14 +78,16 @@ function Run-Query([string]$sql) {
   $tmpSql = Join-Path $env:TEMP ("rel_{0}.sql" -f [guid]::NewGuid().ToString('N'))
   $tmpJson = [IO.Path]::ChangeExtension($tmpSql, '.json')
   [IO.File]::WriteAllText($tmpSql, $sql, [Text.Encoding]::GetEncoding(1252))
+  # executa o fbquery.ps1 neste mesmo processo (sem abrir outro PowerShell): mesma validacao somente leitura
   $ErrorActionPreference = 'Continue'
-  $o = & powershell -NoProfile -ExecutionPolicy Bypass -File $fbquery -File $tmpSql -Json $tmpJson 2>&1 | ForEach-Object { "$_" }
+  $o = & $fbquery -File $tmpSql -Json $tmpJson 2>&1 | ForEach-Object { "$_" }
+  $rc = $LASTEXITCODE
   $ErrorActionPreference = 'Stop'
   Remove-Item $tmpSql -ErrorAction SilentlyContinue
-  if ($LASTEXITCODE -ne 0 -or -not (Test-Path $tmpJson)) { Fail ("Erro na consulta:`n" + ($o -join "`n")) }
-  $d = Get-Content $tmpJson -Raw -Encoding UTF8 | ConvertFrom-Json
+  if ($rc -ne 0 -or -not (Test-Path $tmpJson)) { Fail ("Erro na consulta:`n" + (($o | Where-Object { $_ -notmatch '^OK: ' -and $_ -notmatch 'RemoteException' }) -join "`n")) }
+  $d = Read-JsonRows $tmpJson
   Remove-Item $tmpJson -ErrorAction SilentlyContinue
-  return @($d)
+  return $d
 }
 
 # ---------- cores (padrao Mec Gestao; paleta de graficos validada p/ daltonismo) ----------
@@ -363,17 +365,27 @@ $edgeArgs = @('--headless', '--disable-gpu', '--no-first-run', '--no-default-bro
   '--disable-background-networking', '--disable-component-update', '--disable-sync', '--no-pdf-header-footer',
   "`"--user-data-dir=$prof`"", "`"--print-to-pdf=$saida`"", "`"$uri`"")
 $proc = Start-Process -FilePath $edge -ArgumentList $edgeArgs -PassThru -WindowStyle Hidden
-# espera o PDF aparecer e estabilizar (no maximo 90 s); o Edge as vezes nao encerra sozinho
-$ok = $false; $last = -1
-for ($i = 0; $i -lt 180; $i++) {
-  Start-Sleep -Milliseconds 500
-  if (Test-Path $saida) { $len = (Get-Item $saida).Length; if ($len -gt 0 -and $len -eq $last) { $ok = $true; break }; $last = $len }
-  elseif ($proc.HasExited) { break }
+# normalmente o Edge grava o PDF e encerra em 1-2 s; se nao encerrar, espera o PDF estabilizar (max. 90 s)
+$ok = $false
+if ($proc.WaitForExit(20000)) { $ok = (Test-Path $saida) -and ((Get-Item $saida).Length -gt 0) }
+else {
+  $last = -1
+  for ($i = 0; $i -lt 140; $i++) {
+    if (Test-Path $saida) { $len = (Get-Item $saida).Length; if ($len -gt 0 -and $len -eq $last) { $ok = $true; break }; $last = $len }
+    elseif ($proc.HasExited) { break }
+    Start-Sleep -Milliseconds 500
+  }
+  # encerra apenas os processos do Edge que usam o perfil temporario deste gerador
+  Get-CimInstance Win32_Process -Filter "Name='msedge.exe'" | Where-Object { $_.CommandLine -like "*$prof*" } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 }
-# encerra apenas os processos do Edge que usam o perfil temporario deste gerador
-Get-CimInstance Win32_Process -Filter "Name='msedge.exe'" | Where-Object { $_.CommandLine -like "*$prof*" } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 if (-not $ok) { Fail "Falha ao gerar o PDF. HTML em: $htmlPath" }
 if (-not (Get-Prop $cfg 'manter_html')) { Remove-Item $htmlPath -ErrorAction SilentlyContinue }
 "PDF gerado: $saida"
 "Linhas: $($linhas.Count)"
+# resumo para conferencia sem precisar abrir o PDF
+if ($linhas.Count) {
+  "Primeira linha: " + (($cols | Select-Object -First 4 | ForEach-Object { "$(Get-Prop $_ 'titulo')=$(Fmt (Get-Prop $linhas[0] (Get-Prop $_ 'campo')) ([string](Get-Prop $_ 'tipo')) (Get-Prop $_ 'decimais'))" }) -join ' | ')
+  foreach ($c in $cols) { if ((Get-Prop $c 'total')) { $s = 0.0; foreach ($r in $linhas) { if (-not (Get-Prop $r '_estilo') -or (Get-Prop $r '_estilo') -eq 'normal') { $n = Num (Get-Prop $r (Get-Prop $c 'campo')); if ($null -ne $n) { $s += $n } } }; "Total $(Get-Prop $c 'titulo'): $(Fmt $s ([string](Get-Prop $c 'tipo')) (Get-Prop $c 'decimais'))" } }
+}
+"Cabecalho: $razao | $cnpj"
 exit 0

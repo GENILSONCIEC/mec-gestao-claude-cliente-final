@@ -100,6 +100,7 @@ No SQL, use **apelidos simples sem espaços** (`AS VALOR`, `AS PRODUTO`) e `TRIM
 Mais exemplos (vendas por dia com colunas e linha, participação por grupo em pizza) estão em `references/exemplos/`.
 
 ## Depois de gerar
-1. Abra o PDF (ferramenta de leitura de arquivo) e confira: cabeçalho preenchido, títulos, gráfico legível, totais.
+1. Confira o **resumo impresso pelo gerador**: quantidade de linhas, primeira linha, totais das colunas e cabeçalho.
+   Só abra o PDF se o resumo indicar problema, porque abrir o PDF deixa a resposta bem mais lenta.
 2. Entregue o PDF ao usuário: se houver ferramenta de envio de arquivo, use-a; senão, informe o caminho.
 3. No texto da resposta, resuma em 2–4 linhas o que o relatório mostra (total, destaque principal, critérios).
