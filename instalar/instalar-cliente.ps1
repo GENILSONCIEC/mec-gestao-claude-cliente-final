@@ -237,6 +237,16 @@ if ($claudeExe) {
     ($o1 + $o2 + $o3) | Where-Object { $_ } | Select-Object -Last 12 | ForEach-Object { Write-Host "      $_" }
   }
 }
+# O "plugin marketplace add" regrava a entrada no settings.json sem o autoUpdate: religa a atualização automática
+try {
+  $cfg2 = [IO.File]::ReadAllText($path) | ConvertFrom-Json
+  $ent = $cfg2.extraKnownMarketplaces.$MARKETPLACE
+  if ($ent) {
+    if ($ent.PSObject.Properties['autoUpdate']) { $ent.autoUpdate = $true } else { $ent | Add-Member -NotePropertyName autoUpdate -NotePropertyValue $true }
+    [IO.File]::WriteAllText($path, ($cfg2 | ConvertTo-Json -Depth 20), (New-Object Text.UTF8Encoding($false)))
+    Ok 'Atualização automática ligada.'
+  }
+} catch { Aviso "Não foi possível ligar a atualização automática: $($_.Exception.Message)" }
 if (-not $instalouPlugin) {
   Aviso 'Plugin não instalado automaticamente. Abra o aplicativo Claude, entre na aba "Code" e digite:'
   Write-Host "      /plugin marketplace add $Repo"
