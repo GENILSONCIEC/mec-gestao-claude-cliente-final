@@ -26,7 +26,13 @@ function Ok($t) { Write-Host "  [OK] $t" -ForegroundColor Green }
 function Aviso($t) { Write-Host "  [!]  $t" -ForegroundColor Yellow }
 function Erro($t) { Write-Host "  [X]  $t" -ForegroundColor Red }
 function Sair($code) { Write-Host ''; Read-Host 'Pressione ENTER para sair' | Out-Null; exit $code }
-function Atualiza-Path {
+function Run-Claude($exe, [string[]]$argv, [int]$seg = 180) {
+  $o = Join-Path $env:TEMP 'mec_cl_out.txt'; $e = Join-Path $env:TEMP 'mec_cl_err.txt'
+  foreach ($x in $o, $e) { if (Test-Path $x) { [IO.File]::Delete($x) } }
+  $p = Start-Process -FilePath $exe -ArgumentList $argv -NoNewWindow -PassThru -RedirectStandardOutput $o -RedirectStandardError $e
+  if (-not $p.WaitForExit($seg * 1000)) { try { $p.Kill() } catch {}; return @("(sem resposta em $seg s)") }
+  return @((Get-Content $o -ErrorAction SilentlyContinue) + (Get-Content $e -ErrorAction SilentlyContinue))
+}function Atualiza-Path {
   $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
 }
 
@@ -220,15 +226,15 @@ if ($claudeExe) {
   Write-Host "  Baixando o plugin do GitHub com o Claude Code ($($claudeExe.FullName))..."
   Remove-Item Env:CLAUDE_CONFIG_DIR -ErrorAction SilentlyContinue
   $ErrorActionPreference = 'Continue'
-  $o1 = & $claudeExe.FullName plugin marketplace add $Repo 2>&1 | ForEach-Object { "$_" }
-  if (($o1 -join ' ') -notmatch 'Successfully') { $o1 += & $claudeExe.FullName plugin marketplace update $MARKETPLACE 2>&1 | ForEach-Object { "$_" } }
-  $o2 = & $claudeExe.FullName plugin install $key 2>&1 | ForEach-Object { "$_" }
-  $o3 = & $claudeExe.FullName plugin list 2>&1 | ForEach-Object { "$_" }
+  $o1 = Run-Claude $claudeExe.FullName @('plugin', 'marketplace', 'add', $Repo)
+  if (($o1 -join ' ') -notmatch 'Successfully') { $o1 += Run-Claude $claudeExe.FullName @('plugin', 'marketplace', 'update', $MARKETPLACE) }
+  $o2 = Run-Claude $claudeExe.FullName @('plugin', 'install', $key)
+  $o3 = Run-Claude $claudeExe.FullName @('plugin', 'list') 60
   $ErrorActionPreference = 'Stop'
   if (($o3 -join "`n") -match [regex]::Escape($key)) { $instalouPlugin = $true; Ok "Plugin '$key' instalado e ativado." }
   else {
     Erro 'O Claude Code não conseguiu instalar o plugin:'
-    ($o1 + $o2) | Where-Object { $_ } | Select-Object -Last 8 | ForEach-Object { Write-Host "      $_" }
+    ($o1 + $o2 + $o3) | Where-Object { $_ } | Select-Object -Last 12 | ForEach-Object { Write-Host "      $_" }
   }
 }
 if (-not $instalouPlugin) {
