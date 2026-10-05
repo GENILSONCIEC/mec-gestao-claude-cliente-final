@@ -24,7 +24,11 @@ recente do GitHub e faz tudo sozinho:
    mais nova no GitHub, em segundo plano. Assim os clientes se atualizam mesmo sem reabrir o Claude; a versão nova entra
    em uso na próxima vez que o Claude for aberto.
 
-Depois, basta fechar e abrir o Claude. Na primeira sessão, o plugin é baixado sozinho.
+Depois, feche e abra o Claude.
+
+**Importante para usar:** o plugin funciona no modo **Code** do aplicativo Claude (botão `</>`), numa sessão com ambiente
+**Local** (este computador). Ele **não** funciona na conversa normal (Chat) nem em sessões na nuvem (ícone de nuvem / "Default"),
+porque elas não acessam o computador nem o banco.
 
 Ninguém precisa de conta no GitHub; só a Mec Gestão, para publicar atualizações.
 Se o Windows avisar que o arquivo veio da internet, clique em **Mais informações → Executar assim mesmo**.

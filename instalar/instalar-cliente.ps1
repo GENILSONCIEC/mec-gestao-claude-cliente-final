@@ -290,6 +290,9 @@ if (-not $instalouPlugin) {
 
 Titulo 'Concluído'
 Write-Host '  1. Feche COMPLETAMENTE o aplicativo Claude (inclusive pelo ícone perto do relógio) e abra de novo.' -ForegroundColor White
-Write-Host '  2. Na primeira sessão o plugin é baixado automaticamente do GitHub.' -ForegroundColor White
-Write-Host '  3. Teste pedindo: "relatório dos 10 produtos mais vendidos no mês passado".' -ForegroundColor White
+Write-Host '  2. Use o modo CODE (botão </> no topo da barra lateral), e NÃO a conversa normal (Chat).' -ForegroundColor Yellow
+Write-Host '  3. Clique em "Novo" e confira o ambiente da sessão: tem que ser LOCAL (este computador),' -ForegroundColor Yellow
+Write-Host '     e não a nuvem (ícone de nuvem / "Default"). Se pedir uma pasta, escolha Documentos.' -ForegroundColor Yellow
+Write-Host '  4. Peça, por exemplo: "relatório dos 10 produtos mais vendidos no mês passado".' -ForegroundColor White
+Write-Host '     O Claude vai pedir permissão para rodar os comandos do plugin: autorize.' -ForegroundColor White
 Sair 0
