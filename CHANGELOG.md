@@ -1,5 +1,11 @@
 # Histórico de versões
 
+## 1.0.2 — 05/10/2026
+- Correção: em alguns computadores o PDF falhava ("Falha ao gerar o PDF") porque o processo inicial do Edge encerrava antes
+  de gravar o arquivo. O gerador agora espera o PDF aparecer, mesmo depois que o Edge encerra.
+- Cada geração usa uma pasta de perfil própria do Edge: um Edge preso de uma execução anterior não atrapalha mais.
+- Em caso de falha, a mensagem mostra o código e o erro do Edge.
+
 ## 1.0.1 — 05/10/2026
 - PDF gerado em cerca de metade do tempo (aprox. 3,5 s em vez de 7 s): as consultas rodam no mesmo processo e o gerador
   não espera mais à toa pelo Edge.

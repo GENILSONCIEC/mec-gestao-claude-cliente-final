@@ -357,28 +357,48 @@ $htmlPath = [IO.Path]::ChangeExtension($saida, '.html')
 
 $edge = @("${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe", "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $edge) { Fail "Microsoft Edge nao encontrado. O HTML foi salvo em: $htmlPath" }
-$prof = Join-Path $env:TEMP 'mec_relatorio_edge'
+# perfil temporario EXCLUSIVO desta execucao: evita que um Edge preso de execucao anterior "receba" o trabalho
+$legado = Join-Path $env:TEMP 'mec_relatorio_edge'   # perfil unico das versoes 1.0.0/1.0.1
+if (Test-Path $legado) { Remove-Item $legado -Recurse -Force -ErrorAction SilentlyContinue }
+$profRoot = Join-Path $env:TEMP 'mec_rel_edge'
+if (-not (Test-Path $profRoot)) { New-Item -ItemType Directory -Force $profRoot | Out-Null }
+Get-ChildItem $profRoot -Directory -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -lt (Get-Date).AddHours(-6) } |
+  ForEach-Object { Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }
+$prof = Join-Path $profRoot ([guid]::NewGuid().ToString('N').Substring(0, 12))
+$edgeLog = Join-Path $prof 'edge_erro.log'
+New-Item -ItemType Directory -Force $prof | Out-Null
 $uri = ([Uri]$htmlPath).AbsoluteUri
 $ErrorActionPreference = 'Continue'
 if (Test-Path $saida) { Remove-Item $saida -Force }
 $edgeArgs = @('--headless', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--disable-extensions',
   '--disable-background-networking', '--disable-component-update', '--disable-sync', '--no-pdf-header-footer',
   "`"--user-data-dir=$prof`"", "`"--print-to-pdf=$saida`"", "`"$uri`"")
-$proc = Start-Process -FilePath $edge -ArgumentList $edgeArgs -PassThru -WindowStyle Hidden
-# normalmente o Edge grava o PDF e encerra em 1-2 s; se nao encerrar, espera o PDF estabilizar (max. 90 s)
-$ok = $false
-if ($proc.WaitForExit(20000)) { $ok = (Test-Path $saida) -and ((Get-Item $saida).Length -gt 0) }
-else {
-  $last = -1
-  for ($i = 0; $i -lt 140; $i++) {
-    if (Test-Path $saida) { $len = (Get-Item $saida).Length; if ($len -gt 0 -and $len -eq $last) { $ok = $true; break }; $last = $len }
-    elseif ($proc.HasExited) { break }
-    Start-Sleep -Milliseconds 500
+$proc = Start-Process -FilePath $edge -ArgumentList $edgeArgs -PassThru -NoNewWindow -RedirectStandardError $edgeLog -RedirectStandardOutput (Join-Path $prof 'edge_saida.log')
+# espera o PDF aparecer e ficar estavel (max. 90 s). Mesmo que o processo inicial do Edge encerre,
+# o PDF pode ser gravado um instante depois por outro processo do Edge.
+$ok = $false; $last = -1; $fimProc = $null
+for ($i = 0; $i -lt 450; $i++) {
+  if (Test-Path $saida) {
+    $len = (Get-Item $saida).Length
+    if ($len -gt 0 -and $len -eq $last -and ($proc.HasExited -or $i -gt 10)) { $ok = $true; break }
+    $last = $len
+  } elseif ($proc.HasExited) {
+    if (-not $fimProc) { $fimProc = Get-Date }
+    elseif (((Get-Date) - $fimProc).TotalSeconds -gt 10) { break }   # encerrou e 10 s sem PDF: falhou
   }
-  # encerra apenas os processos do Edge que usam o perfil temporario deste gerador
+  Start-Sleep -Milliseconds 200
+}
+if (-not $proc.HasExited -or -not $ok) {
+  # encerra apenas os processos do Edge que usam o perfil desta execucao
   Get-CimInstance Win32_Process -Filter "Name='msedge.exe'" | Where-Object { $_.CommandLine -like "*$prof*" } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 }
-if (-not $ok) { Fail "Falha ao gerar o PDF. HTML em: $htmlPath" }
+if (-not $ok) {
+  $det = ''
+  if (Test-Path $edgeLog) { $det = ((Get-Content $edgeLog -ErrorAction SilentlyContinue | Where-Object { $_ -notmatch 'component_updater|optimization_guide|language_detection' } | Select-Object -Last 6) -join "`n") }
+  $cod = if ($proc.HasExited) { $proc.ExitCode } else { 'em execucao' }
+  Fail "Falha ao gerar o PDF (Edge: $edge, codigo: $cod). HTML em: $htmlPath`n$det"
+}
+Remove-Item $prof -Recurse -Force -ErrorAction SilentlyContinue
 if (-not (Get-Prop $cfg 'manter_html')) { Remove-Item $htmlPath -ErrorAction SilentlyContinue }
 "PDF gerado: $saida"
 "Linhas: $($linhas.Count)"
