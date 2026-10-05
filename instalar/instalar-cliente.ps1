@@ -205,8 +205,38 @@ if ($cfg.enabledPlugins.PSObject.Properties[$key]) { $cfg.enabledPlugins.$key = 
 else { $cfg.enabledPlugins | Add-Member -NotePropertyName $key -NotePropertyValue $true }
 
 [IO.File]::WriteAllText($path, ($cfg | ConvertTo-Json -Depth 20), (New-Object Text.UTF8Encoding($false)))
-Ok "Marketplace '$MARKETPLACE' ($Repo) registrado com atualização automática."
-Ok "Plugin '$key' ativado."
+Ok "Marketplace '$MARKETPLACE' ($Repo) configurado com atualização automática."
+
+# Baixa e instala o plugin agora, usando o Claude Code que acompanha o aplicativo Claude
+$cands = @()
+$cmd = Get-Command claude -ErrorAction SilentlyContinue; if ($cmd) { $cands += Get-Item $cmd.Source }
+$cands += Get-ChildItem (Join-Path $env:APPDATA 'Claude\claude-code') -Recurse -Filter claude.exe -Depth 3 -ErrorAction SilentlyContinue
+$cands += Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Packages') -Directory -Filter 'Claude_*' -ErrorAction SilentlyContinue |
+  ForEach-Object { Get-ChildItem (Join-Path $_.FullName 'LocalCache\Roaming\Claude\claude-code') -Recurse -Filter claude.exe -Depth 3 -ErrorAction SilentlyContinue }
+$cands += Get-ChildItem (Join-Path $env:USERPROFILE '.local\bin') -Filter claude.exe -ErrorAction SilentlyContinue
+$claudeExe = $cands | Where-Object { $_ } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+$instalouPlugin = $false
+if ($claudeExe) {
+  Write-Host "  Baixando o plugin do GitHub com o Claude Code ($($claudeExe.FullName))..."
+  Remove-Item Env:CLAUDE_CONFIG_DIR -ErrorAction SilentlyContinue
+  $ErrorActionPreference = 'Continue'
+  $o1 = & $claudeExe.FullName plugin marketplace add $Repo 2>&1 | ForEach-Object { "$_" }
+  if (($o1 -join ' ') -notmatch 'Successfully') { $o1 += & $claudeExe.FullName plugin marketplace update $MARKETPLACE 2>&1 | ForEach-Object { "$_" } }
+  $o2 = & $claudeExe.FullName plugin install $key 2>&1 | ForEach-Object { "$_" }
+  $o3 = & $claudeExe.FullName plugin list 2>&1 | ForEach-Object { "$_" }
+  $ErrorActionPreference = 'Stop'
+  if (($o3 -join "`n") -match [regex]::Escape($key)) { $instalouPlugin = $true; Ok "Plugin '$key' instalado e ativado." }
+  else {
+    Erro 'O Claude Code não conseguiu instalar o plugin:'
+    ($o1 + $o2) | Where-Object { $_ } | Select-Object -Last 8 | ForEach-Object { Write-Host "      $_" }
+  }
+}
+if (-not $instalouPlugin) {
+  Aviso 'Plugin não instalado automaticamente. Abra o aplicativo Claude, entre na aba "Code" e digite:'
+  Write-Host "      /plugin marketplace add $Repo"
+  Write-Host "      /plugin install $key"
+  Write-Host '  (ou execute este instalador de novo depois de abrir a aba Code do Claude uma vez)'
+}
 
 Titulo 'Concluído'
 Write-Host '  1. Feche COMPLETAMENTE o aplicativo Claude (inclusive pelo ícone perto do relógio) e abra de novo.' -ForegroundColor White

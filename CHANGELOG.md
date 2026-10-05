@@ -1,5 +1,9 @@
 # Histórico de versões
 
+## Instalador — 05/10/2026 (correção)
+- O instalador agora baixa e instala o plugin na hora, usando o Claude Code que acompanha o aplicativo Claude.
+  Antes, só declarar no settings.json não fazia o Claude baixar o plugin.
+
 ## Instalador — 05/10/2026
 - `INSTALAR-MEC-CLAUDE.bat`: instalador de um arquivo só, que baixa sempre a versão mais recente do instalador.
 - O instalador agora instala o Git se faltar, baixa o isql do Firebird 2.5 (pacote ZIP oficial, sem instalar serviço),
