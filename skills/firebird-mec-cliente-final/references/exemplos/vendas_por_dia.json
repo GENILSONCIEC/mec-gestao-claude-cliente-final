@@ -1,0 +1,18 @@
+{
+  "titulo": "Vendas por dia",
+  "filial": 1,
+  "filtro": "Filtrado por Data: 01/09/2026 até o dia 30/09/2026 | Filial: 1 | Vendas (op. 5) menos devoluções (op. 3)",
+  "sql": "SELECT M2.ME2_DATA AS DATA, SUM(CASE WHEN M2.ME2_OPERACAO = 5 THEN (M2.ME2_VLRUNIT - COALESCE(M2.ME2_DESCONTO,0)) * M2.ME2_QUATIDADE ELSE 0 END) AS VENDAS, SUM(CASE WHEN M2.ME2_OPERACAO = 3 THEN (M2.ME2_VLRUNIT - COALESCE(M2.ME2_DESCONTO,0)) * M2.ME2_QUATIDADE ELSE 0 END) AS DEVOLUCOES, SUM(CASE WHEN M2.ME2_OPERACAO = 5 THEN 1 ELSE -1 END * (M2.ME2_VLRUNIT - COALESCE(M2.ME2_DESCONTO,0)) * M2.ME2_QUATIDADE) AS LIQUIDO, COUNT(DISTINCT M2.ME2_DOCTO) AS DOCUMENTOS FROM MVESTOQUE2 M2 WHERE M2.ME2_FILIAL = 1 AND M2.ME2_DATA BETWEEN '2026-09-01' AND '2026-09-30' AND M2.ME2_OPERACAO IN (5,3) GROUP BY M2.ME2_DATA ORDER BY M2.ME2_DATA",
+  "colunas": [
+    {"campo":"DATA","titulo":"Data","tipo":"data","largura":"14%"},
+    {"campo":"DOCUMENTOS","titulo":"Documentos","tipo":"inteiro","total":true},
+    {"campo":"VENDAS","titulo":"Vendas","tipo":"moeda","total":true},
+    {"campo":"DEVOLUCOES","titulo":"Devoluções","tipo":"moeda","total":true},
+    {"campo":"LIQUIDO","titulo":"Líquido","tipo":"moeda","total":true}
+  ],
+  "totais": true,
+  "graficos": [
+    {"tipo":"colunas","titulo":"Venda líquida por dia (R$)","rotulo":"DATA","valores":["LIQUIDO"],"formato":"moeda"},
+    {"tipo":"linha","titulo":"Vendas x Devoluções por dia (R$)","rotulo":"DATA","valores":["VENDAS","DEVOLUCOES"],"series":["Vendas","Devoluções"],"formato":"moeda"}
+  ]
+}

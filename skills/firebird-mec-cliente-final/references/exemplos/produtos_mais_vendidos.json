@@ -1,0 +1,13 @@
+{
+  "titulo": "Produtos mais vendidos",
+  "filial": 1,
+  "filtro": "Filtrado por Data: 01/09/2026 até o dia 30/09/2026 | Filial: 1 | Operação: Venda",
+  "sql": "SELECT FIRST 15 TRIM(P.PRO_NOMECOMPLETO) AS PRODUTO, SUM(M2.ME2_QUATIDADE) AS QTDE, SUM((M2.ME2_VLRUNIT - COALESCE(M2.ME2_DESCONTO,0)) * M2.ME2_QUATIDADE) AS VALOR FROM MVESTOQUE2 M2 JOIN PRODUTO P ON P.PRO_CODIGO = M2.ME2_PRODUTO WHERE M2.ME2_FILIAL = 1 AND M2.ME2_DATA BETWEEN '2026-09-01' AND '2026-09-30' AND M2.ME2_OPERACAO = 5 GROUP BY P.PRO_NOMECOMPLETO ORDER BY 3 DESC",
+  "colunas": [
+    {"campo":"PRODUTO","titulo":"Produto","tipo":"texto"},
+    {"campo":"QTDE","titulo":"Qtde","tipo":"numero","decimais":3,"total":true,"largura":"12%"},
+    {"campo":"VALOR","titulo":"Valor (R$)","tipo":"moeda","total":true,"largura":"16%"}
+  ],
+  "totais": true,
+  "graficos": [ {"tipo":"barras","titulo":"Top 10 produtos por valor vendido","rotulo":"PRODUTO","valores":["VALOR"],"limite":10,"formato":"moeda"} ]
+}

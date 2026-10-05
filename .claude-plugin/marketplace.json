@@ -1,0 +1,12 @@
+{
+  "name": "mec-gestao-plugins",
+  "description": "Plugins oficiais da Mec Gestão para o Claude Code.",
+  "owner": { "name": "Mec Gestão" },
+  "plugins": [
+    {
+      "name": "mec-gestao",
+      "source": "./",
+      "description": "Consultas somente leitura no banco Firebird 2.5 do sistema MEC, com relatórios em PDF no padrão Mec Gestão."
+    }
+  ]
+}

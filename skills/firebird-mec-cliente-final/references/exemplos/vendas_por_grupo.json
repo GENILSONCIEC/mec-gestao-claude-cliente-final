@@ -1,0 +1,9 @@
+{
+  "titulo": "Vendas por grupo de produto",
+  "filial": 1,
+  "filtro": "Filtrado por Data: 01/09/2026 até o dia 30/09/2026 | Filial: 1",
+  "sql": "SELECT COALESCE(TRIM(G.GRU_NOME), 'SEM GRUPO') AS GRUPO, SUM((M2.ME2_VLRUNIT - COALESCE(M2.ME2_DESCONTO,0)) * M2.ME2_QUATIDADE) AS VALOR FROM MVESTOQUE2 M2 JOIN PRODUTO P ON P.PRO_CODIGO = M2.ME2_PRODUTO LEFT JOIN GRUPO G ON G.GRU_CODIGO = P.PRO_GRUPO WHERE M2.ME2_FILIAL = 1 AND M2.ME2_DATA BETWEEN '2026-09-01' AND '2026-09-30' AND M2.ME2_OPERACAO = 5 GROUP BY 1 ORDER BY 2 DESC",
+  "colunas": [ {"campo":"GRUPO","titulo":"Grupo","tipo":"texto"}, {"campo":"VALOR","titulo":"Valor (R$)","tipo":"moeda","total":true,"largura":"20%"} ],
+  "totais": true,
+  "graficos": [ {"tipo":"pizza","titulo":"Participação por grupo","rotulo":"GRUPO","valores":["VALOR"],"formato":"moeda"} ]
+}

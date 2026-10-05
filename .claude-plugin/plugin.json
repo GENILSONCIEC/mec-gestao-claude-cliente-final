@@ -1,0 +1,8 @@
+{
+  "name": "mec-gestao",
+  "displayName": "Mec Gestão — Relatórios",
+  "version": "1.0.0",
+  "description": "Consultas somente leitura no banco Firebird 2.5 do sistema MEC, com relatórios em PDF no padrão Mec Gestão.",
+  "author": { "name": "Mec Gestão" },
+  "skills": "./skills/"
+}
