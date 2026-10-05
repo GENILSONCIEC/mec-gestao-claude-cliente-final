@@ -61,6 +61,36 @@ if ($cands.Count) {
   L '> claude plugin list'; Run-Claude $exe @('plugin', 'list') | ForEach-Object { L "  $_" }
 } else { L 'claude.exe NÃO ENCONTRADO (abra a aba Code do aplicativo Claude ao menos uma vez)' }
 
-$desk = [Environment]::GetFolderPath('Desktop'); $arq = Join-Path $desk 'diagnostico-mec-claude.txt'
+# ---------- testes reais: conexão (somente leitura) e geração de PDF ----------
+function Run-Ps([string]$script, [string[]]$argv, [int]$seg = 180) {
+  $o = Join-Path $env:TEMP 'mec_diag_ps_out.txt'; $e = Join-Path $env:TEMP 'mec_diag_ps_err.txt'
+  $all = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$script`"") + $argv
+  $t0 = Get-Date
+  $p = Start-Process -FilePath 'powershell.exe' -ArgumentList $all -NoNewWindow -PassThru -RedirectStandardOutput $o -RedirectStandardError $e
+  if (-not $p.WaitForExit($seg * 1000)) { try { $p.Kill() } catch {}; return @("(sem resposta em $seg s - processo encerrado)") }
+  $p.WaitForExit(); $sec = ((Get-Date) - $t0).TotalSeconds
+  return @((Get-Content $o -Encoding UTF8 -ErrorAction SilentlyContinue) + (Get-Content $e -Encoding UTF8 -ErrorAction SilentlyContinue) + ("(tempo: {0:N1} s, código de saída: {1})" -f $sec, $p.ExitCode))
+}
+$plug = $null
+try {
+  $ip = Get-Content (Join-Path $pd 'installed_plugins.json') -Raw | ConvertFrom-Json
+  $plug = @($ip.plugins.'mec-gestao@mec-gestao-plugins')[0].installPath
+} catch {}
+$scr = if ($plug) { Join-Path $plug 'skills\firebird-mec-cliente-final\scripts' } else { $null }
+L ''; L '--- Teste 1: conexão com o banco (somente leitura) ---'
+if ($scr -and (Test-Path (Join-Path $scr 'fbquery.ps1'))) {
+  Run-Ps (Join-Path $scr 'fbquery.ps1') @('-Sql', '"SELECT FIRST 1 FIL_CODIGO, TRIM(FIL_RAZAO) AS RAZAO FROM FILIAL"') 120 | ForEach-Object { L "  $_" }
+  L '--- Teste 2: geração de PDF de teste ---'
+  $spec = Join-Path $env:TEMP 'mec_diag_spec.json'; $pdf = Join-Path $env:TEMP 'mec_diag_teste.pdf'
+  $js = @{ titulo = 'Teste de diagnostico'; filtro = 'Teste'; linhas = @(@{ ITEM = 'A'; VALOR = 10 }, @{ ITEM = 'B'; VALOR = 20 });
+           colunas = @(@{ campo = 'ITEM'; titulo = 'Item'; tipo = 'texto' }, @{ campo = 'VALOR'; titulo = 'Valor'; tipo = 'moeda'; total = $true });
+           totais = $true; graficos = @(@{ tipo = 'barras'; titulo = 'Teste'; rotulo = 'ITEM'; valores = @('VALOR'); formato = 'moeda' }); saida = $pdf } | ConvertTo-Json -Depth 6
+  [IO.File]::WriteAllText($spec, $js, (New-Object Text.UTF8Encoding($false)))
+  Run-Ps (Join-Path $scr 'gerar_relatorio.ps1') @('-Spec', "`"$spec`"") 180 | ForEach-Object { L "  $_" }
+  L ("  PDF de teste criado: " + (Test-Path $pdf))
+  foreach ($x in $spec, $pdf) { if (Test-Path $x) { [IO.File]::Delete($x) } }
+} else { L '  scripts do plugin não encontrados - testes não executados' }
+
+$desk = [Environment]::GetFolderPath('Desktop'); if (-not $desk -or -not (Test-Path $desk)) { $desk = $env:TEMP }; $arq = Join-Path $desk 'diagnostico-mec-claude.txt'
 [IO.File]::WriteAllLines($arq, $out, (New-Object Text.UTF8Encoding($true)))
 Write-Host ''; Write-Host "Arquivo salvo em: $arq" -ForegroundColor Cyan
