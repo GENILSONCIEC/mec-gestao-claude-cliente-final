@@ -19,7 +19,10 @@ recente do GitHub e faz tudo sozinho:
 3. providencia o `isql` do **Firebird 2.5**. Se faltar, baixa o pacote oficial e extrai em
    `%LOCALAPPDATA%\MecGestao\Firebird25`, sem instalar serviço nem alterar o Firebird existente;
 4. lista os bancos do MEC encontrados no computador, pede o usuário e a senha do Firebird e testa a conexão;
-5. registra o plugin no Claude com **atualização automática**.
+5. registra o plugin no Claude com **atualização automática**;
+6. cria a tarefa agendada **"MecGestao - Atualizar plugin Claude"**, que ao entrar no Windows e a cada 4 horas busca a versão
+   mais nova no GitHub, em segundo plano. Assim os clientes se atualizam mesmo sem reabrir o Claude; a versão nova entra
+   em uso na próxima vez que o Claude for aberto.
 
 Depois, basta fechar e abrir o Claude. Na primeira sessão, o plugin é baixado sozinho.
 

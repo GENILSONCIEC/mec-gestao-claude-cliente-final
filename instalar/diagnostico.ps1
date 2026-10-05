@@ -61,6 +61,17 @@ if ($cands.Count) {
   L '> claude plugin list'; Run-Claude $exe @('plugin', 'list') | ForEach-Object { L "  $_" }
 } else { L 'claude.exe NÃO ENCONTRADO (abra a aba Code do aplicativo Claude ao menos uma vez)' }
 
+L ''; L '--- Atualização ---'
+try {
+  $gh = (Invoke-WebRequest -UseBasicParsing 'https://raw.githubusercontent.com/GENILSONCIEC/mec-gestao-claude-cliente-final/main/.claude-plugin/plugin.json' -TimeoutSec 30).Content | ConvertFrom-Json
+  L "Versão mais nova no GitHub: $($gh.version)"
+} catch { L "Não foi possível consultar o GitHub: $($_.Exception.Message)" }
+$tk = Get-ScheduledTask -TaskName 'MecGestao - Atualizar plugin Claude' -ErrorAction SilentlyContinue
+if ($tk) { $ti = $tk | Get-ScheduledTaskInfo; L "Tarefa agendada: $($tk.State)  última execução: $($ti.LastRunTime)  resultado: $($ti.LastTaskResult)  próxima: $($ti.NextRunTime)" }
+else { L 'Tarefa agendada: NÃO EXISTE (rode o instalador novamente para criá-la)' }
+$ulog = Join-Path $env:LOCALAPPDATA 'MecGestao\atualizacao.log'
+if (Test-Path $ulog) { L 'Últimas atualizações:'; Get-Content $ulog -Encoding UTF8 -Tail 5 | ForEach-Object { L "  $_" } }
+
 # ---------- testes reais: conexão (somente leitura) e geração de PDF ----------
 function Run-Ps([string]$script, [string[]]$argv, [int]$seg = 180) {
   $o = Join-Path $env:TEMP 'mec_diag_ps_out.txt'; $e = Join-Path $env:TEMP 'mec_diag_ps_err.txt'

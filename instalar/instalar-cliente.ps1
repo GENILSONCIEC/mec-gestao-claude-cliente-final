@@ -31,7 +31,7 @@ function Run-Claude($exe, [string[]]$argv, [int]$seg = 180) {
   foreach ($x in $o, $e) { if (Test-Path $x) { [IO.File]::Delete($x) } }
   $p = Start-Process -FilePath $exe -ArgumentList $argv -NoNewWindow -PassThru -RedirectStandardOutput $o -RedirectStandardError $e
   if (-not $p.WaitForExit($seg * 1000)) { try { $p.Kill() } catch {}; return @("(sem resposta em $seg s)") }
-  return @((Get-Content $o -ErrorAction SilentlyContinue) + (Get-Content $e -ErrorAction SilentlyContinue))
+  return @((Get-Content $o -Encoding UTF8 -ErrorAction SilentlyContinue) + (Get-Content $e -Encoding UTF8 -ErrorAction SilentlyContinue))
 }function Atualiza-Path {
   $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
 }
@@ -229,6 +229,7 @@ if ($claudeExe) {
   $o1 = Run-Claude $claudeExe.FullName @('plugin', 'marketplace', 'add', $Repo)
   if (($o1 -join ' ') -notmatch 'Successfully') { $o1 += Run-Claude $claudeExe.FullName @('plugin', 'marketplace', 'update', $MARKETPLACE) }
   $o2 = Run-Claude $claudeExe.FullName @('plugin', 'install', $key)
+  $o2 += Run-Claude $claudeExe.FullName @('plugin', 'update', $key)   # se já estava instalado, traz a versão mais nova
   $o3 = Run-Claude $claudeExe.FullName @('plugin', 'list') 60
   $ErrorActionPreference = 'Stop'
   if (($o3 -join "`n") -match [regex]::Escape($key)) { $instalouPlugin = $true; Ok "Plugin '$key' instalado e ativado." }
@@ -247,6 +248,39 @@ try {
     Ok 'Atualização automática ligada.'
   }
 } catch { Aviso "Não foi possível ligar a atualização automática: $($_.Exception.Message)" }
+# ---------- 6. Tarefa agendada de atualização (garantia extra, sem depender de reabrir o Claude) ----------
+Titulo '6. Atualização automática em segundo plano'
+try {
+  $mecDir = Join-Path $env:LOCALAPPDATA 'MecGestao'
+  if (-not (Test-Path $mecDir)) { New-Item -ItemType Directory -Force $mecDir | Out-Null }
+  $raw = "https://raw.githubusercontent.com/$Repo/main/instalar/atualizar-plugin.ps1"
+  $upd = Join-Path $mecDir 'atualizar-plugin.ps1'
+  $local = Join-Path $PSScriptRoot 'atualizar-plugin.ps1'
+  try { Invoke-WebRequest -UseBasicParsing $raw -OutFile $upd } catch { if (Test-Path $local) { Copy-Item $local $upd -Force } else { throw } }
+  # o "stub" baixa sempre a versão mais nova do atualizador antes de rodar (correções chegam sozinhas)
+  $stub = Join-Path $mecDir 'executar-atualizacao.ps1'
+  $updQ = $upd.Replace("'", "''")
+  $stubTxt = @"
+`$ErrorActionPreference = 'SilentlyContinue'
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch {}
+`$novo = '$updQ.novo'
+try { Invoke-WebRequest -UseBasicParsing '$raw' -OutFile `$novo -TimeoutSec 60; if ((Get-Item `$novo).Length -gt 500) { Move-Item `$novo '$updQ' -Force } } catch {}
+& '$updQ'
+"@
+  [IO.File]::WriteAllText($stub, $stubTxt, (New-Object Text.UTF8Encoding($true)))
+  $vbs = Join-Path $mecDir 'executar-atualizacao.vbs'
+  $vbsTxt = 'CreateObject("WScript.Shell").Run "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File """ & "' + $stub + '" & """", 0, True'
+  [IO.File]::WriteAllText($vbs, $vbsTxt, [Text.Encoding]::Default)
+  $acao = New-ScheduledTaskAction -Execute 'wscript.exe' -Argument "`"$vbs`""
+  $gatilhos = @((New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(10) -RepetitionInterval (New-TimeSpan -Hours 4)))
+  try { $gatilhos += New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME" } catch {}
+  $conf = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 20) -MultipleInstances IgnoreNew
+  $nomeTarefa = 'MecGestao - Atualizar plugin Claude'
+  try { Register-ScheduledTask -TaskName $nomeTarefa -Action $acao -Trigger $gatilhos -Settings $conf -Description 'Atualiza o plugin Mec Gestão do Claude a partir do GitHub.' -Force | Out-Null }
+  catch { Register-ScheduledTask -TaskName $nomeTarefa -Action $acao -Trigger $gatilhos[0] -Settings $conf -Description 'Atualiza o plugin Mec Gestão do Claude a partir do GitHub.' -Force | Out-Null }
+  Ok "Tarefa agendada '$nomeTarefa' criada (ao entrar no Windows e a cada 4 horas)."
+} catch { Aviso "Não foi possível criar a tarefa de atualização: $($_.Exception.Message). A atualização automática do Claude continua ligada." }
+
 if (-not $instalouPlugin) {
   Aviso 'Plugin não instalado automaticamente. Abra o aplicativo Claude, entre na aba "Code" e digite:'
   Write-Host "      /plugin marketplace add $Repo"

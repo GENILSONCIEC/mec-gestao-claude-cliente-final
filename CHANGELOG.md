@@ -1,5 +1,12 @@
 # Histórico de versões
 
+## Instalador — 05/10/2026 (atualização garantida)
+- Nova tarefa agendada "MecGestao - Atualizar plugin Claude" (ao entrar no Windows e a cada 4 h), que atualiza o plugin
+  pelo GitHub em segundo plano (`instalar/atualizar-plugin.ps1`, sempre baixado na versão mais nova). Registro em
+  `%LOCALAPPDATA%\MecGestao\atualizacao.log`.
+- Rodar o instalador de novo também atualiza o plugin para a versão mais nova.
+- O diagnóstico mostra a versão no GitHub, a tarefa agendada e as últimas atualizações.
+
 ## 1.0.2 — 05/10/2026
 - Correção: em alguns computadores o PDF falhava ("Falha ao gerar o PDF") porque o processo inicial do Edge encerrava antes
   de gravar o arquivo. O gerador agora espera o PDF aparecer, mesmo depois que o Edge encerra.
