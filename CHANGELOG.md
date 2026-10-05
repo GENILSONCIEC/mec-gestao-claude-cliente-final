@@ -1,5 +1,10 @@
 # Histórico de versões
 
+## Instalador — 05/10/2026
+- `INSTALAR-MEC-CLAUDE.bat`: instalador de um arquivo só, que baixa sempre a versão mais recente do instalador.
+- O instalador agora instala o Git se faltar, baixa o isql do Firebird 2.5 (pacote ZIP oficial, sem instalar serviço),
+  lista os bancos do MEC encontrados e testa a conexão, com até 3 tentativas de senha.
+
 ## 1.0.0 — 05/10/2026
 - Primeira versão.
 - Consultas somente leitura no Firebird 2.5 (`fbquery.ps1`): aceita só SELECT/WITH e roda em transação READ ONLY.

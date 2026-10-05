@@ -10,23 +10,26 @@ em linguagem natural e receber **relatórios em PDF no padrão Mec Gestão**, co
 
 ## Instalação no cliente (uma vez por máquina)
 
-Pré-requisitos:
-- aplicativo Claude ou Claude Code;
-- [Git para Windows](https://git-scm.com/download/win);
-- cliente do Firebird 2.5;
-- Microsoft Edge (já vem no Windows).
+**Envie ao cliente só o arquivo [`INSTALAR-MEC-CLAUDE.bat`](INSTALAR-MEC-CLAUDE.bat)** (por WhatsApp, e-mail ou pendrive).
+O cliente dá dois cliques no arquivo, com o usuário do Windows que usa o Claude. O instalador baixa a versão mais
+recente do GitHub e faz tudo sozinho:
 
-1. Baixe este repositório (**Code → Download ZIP**) e extraia.
-2. Execute `instalar\instalar-cliente.bat` e informe:
-   - o banco (`servidor/porta:caminho.fdb`);
-   - o usuário e a senha do Firebird.
+1. verifica o aplicativo Claude e o Microsoft Edge (usado para gerar os PDFs);
+2. instala o **Git**, se faltar;
+3. providencia o `isql` do **Firebird 2.5**. Se faltar, baixa o pacote oficial e extrai em
+   `%LOCALAPPDATA%\MecGestao\Firebird25`, sem instalar serviço nem alterar o Firebird existente;
+4. lista os bancos do MEC encontrados no computador, pede o usuário e a senha do Firebird e testa a conexão;
+5. registra o plugin no Claude com **atualização automática**.
 
-   O instalador testa a conexão e registra o plugin com atualização automática.
-3. Feche e abra o Claude. Na primeira sessão, o plugin é baixado sozinho.
+Depois, basta fechar e abrir o Claude. Na primeira sessão, o plugin é baixado sozinho.
+
+Ninguém precisa de conta no GitHub; só a Mec Gestão, para publicar atualizações.
+Se o Windows avisar que o arquivo veio da internet, clique em **Mais informações → Executar assim mesmo**.
 
 **Recomendado:** use um usuário do Firebird com permissão **somente de SELECT**, não o SYSDBA.
 O script para criá-lo está em [`configuracao.md`](skills/firebird-mec-cliente-final/references/configuracao.md).
 
+Alternativa: baixe o ZIP do repositório, extraia e execute `instalar\instalar-cliente.bat`.
 Instalação manual, sem o instalador: no Claude, digite
 ```
 /plugin marketplace add GENILSONCIEC/mec-gestao-claude-cliente-final
@@ -58,6 +61,7 @@ skills/firebird-mec-cliente-final/
   scripts/fbquery.ps1       consultas somente leitura (bloqueio + transação READ ONLY)
   scripts/gerar_relatorio.ps1  PDF no padrão Mec Gestão (Edge headless)
   references/               modelo de dados, performance, procedures, layout do PDF, exemplos
+INSTALAR-MEC-CLAUDE.bat    instalador de um arquivo só (baixa o instalar-cliente.ps1 do GitHub)
 instalar/
-  instalar-cliente.bat/.ps1 instalador para as máquinas dos clientes
+  instalar-cliente.bat/.ps1 instalador completo
 ```
